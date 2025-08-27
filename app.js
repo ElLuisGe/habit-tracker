@@ -1,18 +1,8 @@
-// app.js - VERSIÓN COMPLETA con todas las features
-const firebaseConfig = {
-  apiKey: "AIzaSyB29pr3NH31ORJs92N0y6POCf3qGJxVJ9c",
-  authDomain: "habit-tracker-final-3dad5.firebaseapp.com",
-  projectId: "habit-tracker-final-3dad5",
-  storageBucket: "habit-tracker-final-3dad5.firebasestorage.app",
-  messagingSenderId: "373459383949",
-  appId: "1:373459383949:web:487cc97882b063735254c4",
-  measurementId: "G-9Q4JG5RMHX"
-};
-
+// app.js - VERSIÓN COMPLETA para GitHub Pages
 class HabitTracker {
     constructor() {
         this.habits = JSON.parse(localStorage.getItem('habits')) || [];
-        this.currentDate = new Date().toLocaleDateString('es-ES');
+        this.currentDate = this.getCurrentDate();
         this.currentMonth = new Date().getMonth();
         this.currentYear = new Date().getFullYear();
         this.charts = {};
@@ -20,6 +10,27 @@ class HabitTracker {
         this.init();
     }
 
+    // ===== FUNCIONES DE FECHA SEGURAS =====
+    getCurrentDate() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    formatDate(dateStr) {
+        const [year, month, day] = dateStr.split('-');
+        return `${day}/${month}/${year}`;
+    }
+
+    getMonthName(month) {
+        const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        return months[month];
+    }
+
+    // ===== INICIALIZACIÓN =====
     init() {
         this.renderHabits();
         this.renderFullCalendar();
@@ -78,7 +89,6 @@ class HabitTracker {
     }
 
     showTab(tabName) {
-        // Ocultar todos los tabs
         document.querySelectorAll('.tab-content').forEach(tab => {
             tab.classList.remove('active');
         });
@@ -87,16 +97,15 @@ class HabitTracker {
             btn.classList.remove('active');
         });
 
-        // Mostrar tab seleccionado
         document.getElementById(tabName + 'Tab').classList.add('active');
         document.querySelector(`.tab-btn[data-tab="${tabName}"]`).classList.add('active');
 
-        // Actualizar gráficos si es necesario
         if (tabName === 'charts') {
             setTimeout(() => this.updateCharts(), 100);
         }
     }
 
+    // ===== GESTIÓN DE HÁBITOS =====
     addHabit() {
         const input = document.getElementById('habitInput');
         const name = input.value.trim();
@@ -192,6 +201,8 @@ class HabitTracker {
 
     renderHabits() {
         const habitsList = document.getElementById('habitsList');
+        if (!habitsList) return;
+        
         habitsList.innerHTML = '';
 
         if (this.habits.length === 0) {
@@ -214,7 +225,7 @@ class HabitTracker {
             habitElement.className = `habit-item ${isCompleted ? 'completed' : ''}`;
             habitElement.innerHTML = `
                 <input type="checkbox" class="habit-check" ${isCompleted ? 'checked' : ''} 
-                    onchange="app.toggleHabit(${habit.id})">
+                    onchange="window.app.toggleHabit(${habit.id})">
                 <div class="habit-content">
                     <div class="habit-name">${habit.name}</div>
                     <div class="habit-details">
@@ -223,7 +234,7 @@ class HabitTracker {
                         <span class="habit-completion">${completionRate}% completado</span>
                     </div>
                 </div>
-                <button class="btn-delete" onclick="app.deleteHabit(${habit.id})">
+                <button class="btn-delete" onclick="window.app.deleteHabit(${habit.id})">
                     <i class="fas fa-trash"></i>
                 </button>
             `;
@@ -266,6 +277,8 @@ class HabitTracker {
     // ===== CALENDARIO COMPLETO =====
     renderFullCalendar() {
         const calendar = document.getElementById('fullCalendar');
+        if (!calendar) return;
+        
         calendar.innerHTML = '';
 
         // Encabezados de días
@@ -277,7 +290,7 @@ class HabitTracker {
             calendar.appendChild(dayElement);
         });
 
-        // Obtener primer día del mes y último día
+        // Obtener primer y último día del mes
         const firstDay = new Date(this.currentYear, this.currentMonth, 1);
         const lastDay = new Date(this.currentYear, this.currentMonth + 1, 0);
         
@@ -294,10 +307,8 @@ class HabitTracker {
         }
 
         // Actualizar mes actual
-        const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         document.getElementById('currentMonth').textContent = 
-            `${monthNames[this.currentMonth]} ${this.currentYear}`;
+            `${this.getMonthName(this.currentMonth)} ${this.currentYear}`;
     }
 
     createCalendarDay(type, day = null, dateStr = null) {
@@ -344,15 +355,22 @@ class HabitTracker {
         this.renderFullCalendar();
     }
 
-    // ===== GRÁFICOS =====
+    // ===== GRÁFICAS =====
     initCharts() {
+        if (typeof Chart === 'undefined') {
+            console.log('Chart.js no cargado aún');
+            return;
+        }
+        
         this.createWeeklyChart();
         this.createMonthlyChart();
         this.createCategoryChart();
     }
 
     createWeeklyChart() {
-        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        const ctx = document.getElementById('weeklyChart');
+        if (!ctx) return;
+        
         const data = this.getWeeklyProductivity();
         
         this.charts.weekly = new Chart(ctx, {
@@ -371,11 +389,7 @@ class HabitTracker {
                 responsive: true,
                 scales: {
                     y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Hábitos completados'
-                        }
+                        beginAtZero: true
                     }
                 }
             }
@@ -387,9 +401,14 @@ class HabitTracker {
         
         this.habits.forEach(habit => {
             habit.completedDates.forEach(date => {
-                const dayOfWeek = new Date(date).getDay();
-                const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-                weekDays[adjustedDay]++;
+                try {
+                    const dateObj = new Date(date);
+                    const dayOfWeek = dateObj.getDay();
+                    const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                    weekDays[adjustedDay]++;
+                } catch (e) {
+                    console.log('Error procesando fecha:', date);
+                }
             });
         });
 
@@ -397,7 +416,9 @@ class HabitTracker {
     }
 
     createMonthlyChart() {
-        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        const ctx = document.getElementById('monthlyChart');
+        if (!ctx) return;
+        
         const data = this.getMonthlyProductivity();
         
         this.charts.monthly = new Chart(ctx, {
@@ -412,18 +433,6 @@ class HabitTracker {
                     borderColor: 'rgba(255, 99, 132, 1)',
                     tension: 0.4
                 }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Hábitos completados'
-                        }
-                    }
-                }
             }
         });
     }
@@ -435,10 +444,14 @@ class HabitTracker {
 
         this.habits.forEach(habit => {
             habit.completedDates.forEach(date => {
-                const dateObj = new Date(date);
-                if (dateObj.getMonth() === currentMonth) {
-                    const day = dateObj.getDate() - 1;
-                    dailyCount[day]++;
+                try {
+                    const dateObj = new Date(date);
+                    if (dateObj.getMonth() === currentMonth) {
+                        const day = dateObj.getDate() - 1;
+                        if (day < daysInMonth) dailyCount[day]++;
+                    }
+                } catch (e) {
+                    console.log('Error procesando fecha:', date);
                 }
             });
         });
@@ -447,7 +460,9 @@ class HabitTracker {
     }
 
     createCategoryChart() {
-        const ctx = document.getElementById('categoryChart').getContext('2d');
+        const ctx = document.getElementById('categoryChart');
+        if (!ctx) return;
+        
         const data = this.getCategoryDistribution();
         
         this.charts.category = new Chart(ctx, {
@@ -460,14 +475,6 @@ class HabitTracker {
                         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
                     ]
                 }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
-                }
             }
         });
     }
@@ -483,15 +490,15 @@ class HabitTracker {
     updateCharts() {
         if (this.charts.weekly) {
             this.charts.weekly.data.datasets[0].data = this.getWeeklyProductivity();
-            this.charts.weekly.update();
+            this.charts.weekly.update('none');
         }
         if (this.charts.monthly) {
             this.charts.monthly.data.datasets[0].data = this.getMonthlyProductivity();
-            this.charts.monthly.update();
+            this.charts.monthly.update('none');
         }
         if (this.charts.category) {
             this.charts.category.data.datasets[0].data = Object.values(this.getCategoryDistribution());
-            this.charts.category.update();
+            this.charts.category.update('none');
         }
     }
 
@@ -507,7 +514,7 @@ class HabitTracker {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `habit-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `habit-tracker-backup-${this.currentDate}.json`;
         a.click();
         
         this.showNotification('Datos exportados correctamente');
@@ -539,7 +546,6 @@ class HabitTracker {
         };
         reader.readAsText(file);
         
-        // Reset input
         event.target.value = '';
     }
 
@@ -585,8 +591,34 @@ class HabitTracker {
     }
 }
 
-// Inicializar la aplicación
+// ===== INICIALIZACIÓN SEGURA =====
 let app;
-document.addEventListener('DOMContentLoaded', () => {
-    app = new HabitTracker();
+
+function initializeApp() {
+    if (typeof Chart !== 'undefined') {
+        app = new HabitTracker();
+        window.app = app; // Hacer global para los event listeners
+    } else {
+        setTimeout(initializeApp, 100);
+    }
+}
+
+function loadChartJS(callback) {
+    if (typeof Chart !== 'undefined') {
+        callback();
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+    script.onload = callback;
+    script.onerror = () => {
+        console.log('Error cargando Chart.js, continuando sin gráficas');
+        callback();
+    };
+    document.head.appendChild(script);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadChartJS(initializeApp);
 });
