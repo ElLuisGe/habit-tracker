@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker Pro</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-chart-line"></i> Habit Tracker Pro</h1>
+            <p>Seguimiento completo de tus hábitos</p>
+            <div class="header-actions">
+                <button id="exportBtn" class="btn-action">
+                    <i class="fas fa-download"></i> Exportar
+                </button>
+                <button id="importBtn" class="btn-action">
+                    <i class="fas fa-upload"></i> Importar
+                </button>
+                <button id="clearData" class="btn-clear">
+                    <i class="fas fa-trash"></i> Borrar Todo
+                </button>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="habits">Hábitos</button>
+            <button class="tab-btn" data-tab="charts">Gráficos</button>
+            <button class="tab-btn" data-tab="calendar">Calendario</button>
+        </div>
+
+        <div id="habitsTab" class="tab-content active">
+            <div class="add-habit">
+                <input type="text" id="habitInput" placeholder="¿Qué hábito quieres añadir?">
+                <select id="habitCategory">
+                    <option value="salud">🏥 Salud</option>
+                    <option value="deporte">⚽ Deporte</option>
+                    <option value="estudio">📚 Estudio</option>
+                    <option value="trabajo">💼 Trabajo</option>
+                    <option value="personal">🌟 Personal</option>
+                </select>
+                <button id="addBtn">
+                    <i class="fas fa-plus"></i> Añadir
+                </button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <h3>✅ Hoy completados</h3>
+                    <span id="todayCount">0/0</span>
+                </div>
+                <div class="stat-card">
+                    <h3>📊 Total hábitos</h3>
+                    <span id="totalCount">0</span>
+                </div>
+                <div class="stat-card">
+                    <h3>🔥 Racha actual</h3>
+                    <span id="streakCount">0 días</span>
+                </div>
+                <div class="stat-card">
+                    <h3>⭐ Productividad</h3>
+                    <span id="productivityScore">0%</span>
+                </div>
+            </div>
+
+            <div class="habits-container">
+                <h2>Mis Hábitos</h2>
+                <div id="habitsList" class="habits-list"></div>
+            </div>
+        </div>
+
+        <div id="chartsTab" class="tab-content">
+            <div class="charts-container">
+                <h2><i class="fas fa-chart-bar"></i> Análisis de Productividad</h2>
+                
+                <div class="chart-section">
+                    <h3>Productividad por Día de la Semana</h3>
+                    <canvas id="weeklyChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="chart-section">
+                    <h3>Evolución Mensual</h3>
+                    <canvas id="monthlyChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="chart-section">
+                    <h3>Distribución por Categorías</h3>
+                    <canvas id="categoryChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="calendarTab" class="tab-content">
+            <div class="calendar-section">
+                <h2><i class="fas fa-calendar"></i> Calendario Mensual</h2>
+                <div class="calendar-navigation">
+                    <button id="prevMonth" class="btn-nav">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h3 id="currentMonth"></h3>
+                    <button id="nextMonth" class="btn-nav">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div id="fullCalendar" class="full-calendar"></div>
+            </div>
+        </div>
+
+        <input type="file" id="importFile" accept=".json,.csv" style="display: none;">
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="app.js"></script>
+</body>
+</html>
