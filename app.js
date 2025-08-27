@@ -157,31 +157,51 @@ class HabitTracker {
         this.showNotification(`Hábito ${action} para hoy`);
     }
 
-    updateStreak(habit) {
-        if (habit.completedDates.length === 0) {
-            habit.streak = 0;
-            return;
-        }
-
-        const dates = [...habit.completedDates].sort();
-        let maxStreak = 0;
-        let currentStreak = 0;
-
-        for (let i = 1; i < dates.length; i++) {
-            const prevDate = new Date(dates[i - 1]);
-            const currDate = new Date(dates[i]);
-            const diffDays = Math.ceil((currDate - prevDate) / (1000 * 60 * 60 * 24));
-            
-            if (diffDays === 1) {
-                currentStreak++;
-            } else if (diffDays > 1) {
-                maxStreak = Math.max(maxStreak, currentStreak);
-                currentStreak = 0;
-            }
-        }
-
-        habit.streak = Math.max(maxStreak, currentStreak);
+updateStreak(habit) {
+    if (habit.completedDates.length === 0) {
+        habit.streak = 0;
+        return;
     }
+
+    // Ordenar fechas y asegurar formato correcto
+    const sortedDates = [...habit.completedDates]
+        .map(date => {
+            // Asegurar formato YYYY-MM-DD
+            if (date.includes('/')) {
+                const [day, month, year] = date.split('/');
+                return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+            return date;
+        })
+        .sort()
+        .filter((date, index, array) => array.indexOf(date) === index); // Remover duplicados
+
+    let currentStreak = 1;
+    let longestStreak = 1;
+
+    for (let i = 1; i < sortedDates.length; i++) {
+        const prevDate = new Date(sortedDates[i - 1]);
+        const currDate = new Date(sortedDates[i]);
+        
+        // Calcular diferencia en días
+        const diffTime = Math.abs(currDate - prevDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 1) {
+            // Día consecutivo
+            currentStreak++;
+        } else if (diffDays > 1) {
+            // Reiniciar racha si hay gap de más de 1 día
+            longestStreak = Math.max(longestStreak, currentStreak);
+            currentStreak = 1;
+        }
+        
+        longestStreak = Math.max(longestStreak, currentStreak);
+    }
+
+    habit.streak = Math.max(longestStreak, currentStreak);
+    habit.completedDates = sortedDates; // Guardar fechas normalizadas
+}
 
     deleteHabit(habitId) {
         const habitIndex = this.habits.findIndex(h => h.id === habitId);
@@ -622,3 +642,4 @@ function loadChartJS(callback) {
 document.addEventListener('DOMContentLoaded', function() {
     loadChartJS(initializeApp);
 });
+
