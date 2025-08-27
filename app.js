@@ -1,4 +1,4 @@
-// app.js - VERSIÓN COMPLETA para GitHub Pages
+// app.js - VERSIÓN COMPLETA con Rachas Mejoradas
 class HabitTracker {
     constructor() {
         this.habits = JSON.parse(localStorage.getItem('habits')) || [];
@@ -30,13 +30,47 @@ class HabitTracker {
         return months[month];
     }
 
+    normalizeDate(dateStr) {
+        // Convertir cualquier formato de fecha a YYYY-MM-DD
+        if (typeof dateStr !== 'string') return '';
+        
+        if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const [day, month, year] = parts;
+                return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            }
+        }
+        return dateStr; // Ya está en formato YYYY-MM-DD
+    }
+
     // ===== INICIALIZACIÓN =====
     init() {
+        this.normalizeAllDates();
         this.renderHabits();
         this.renderFullCalendar();
         this.setupEventListeners();
         this.initCharts();
         console.log('✅ Habit Tracker PRO iniciado');
+    }
+
+    normalizeAllDates() {
+        this.habits.forEach(habit => {
+            if (habit.completedDates && Array.isArray(habit.completedDates)) {
+                habit.completedDates = habit.completedDates
+                    .map(date => this.normalizeDate(date))
+                    .filter(date => date !== '' && this.isValidDate(date))
+                    .filter((date, index, array) => array.indexOf(date) === index)
+                    .sort();
+            } else {
+                habit.completedDates = [];
+            }
+        });
+    }
+
+    isValidDate(dateStr) {
+        const regex = /^\d{4}-\d{2}-\d{2}$/;
+        return regex.test(dateStr);
     }
 
     setupEventListeners() {
@@ -137,12 +171,15 @@ class HabitTracker {
         const habit = this.habits.find(h => h.id === habitId);
         if (!habit) return;
 
-        const index = habit.completedDates.indexOf(this.currentDate);
+        const currentDateNormalized = this.normalizeDate(this.currentDate);
+        const index = habit.completedDates.indexOf(currentDateNormalized);
         
         if (index === -1) {
-            habit.completedDates.push(this.currentDate);
+            // Marcar como completado hoy
+            habit.completedDates.push(currentDateNormalized);
             habit.totalCompletions++;
         } else {
+            // Desmarcar
             habit.completedDates.splice(index, 1);
             habit.totalCompletions--;
         }
@@ -157,51 +194,51 @@ class HabitTracker {
         this.showNotification(`Hábito ${action} para hoy`);
     }
 
-updateStreak(habit) {
-    if (habit.completedDates.length === 0) {
-        habit.streak = 0;
-        return;
-    }
-
-    // Ordenar fechas y asegurar formato correcto
-    const sortedDates = [...habit.completedDates]
-        .map(date => {
-            // Asegurar formato YYYY-MM-DD
-            if (date.includes('/')) {
-                const [day, month, year] = date.split('/');
-                return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            }
-            return date;
-        })
-        .sort()
-        .filter((date, index, array) => array.indexOf(date) === index); // Remover duplicados
-
-    let currentStreak = 1;
-    let longestStreak = 1;
-
-    for (let i = 1; i < sortedDates.length; i++) {
-        const prevDate = new Date(sortedDates[i - 1]);
-        const currDate = new Date(sortedDates[i]);
-        
-        // Calcular diferencia en días
-        const diffTime = Math.abs(currDate - prevDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 1) {
-            // Día consecutivo
-            currentStreak++;
-        } else if (diffDays > 1) {
-            // Reiniciar racha si hay gap de más de 1 día
-            longestStreak = Math.max(longestStreak, currentStreak);
-            currentStreak = 1;
+    updateStreak(habit) {
+        if (!habit.completedDates || habit.completedDates.length === 0) {
+            habit.streak = 0;
+            return;
         }
-        
-        longestStreak = Math.max(longestStreak, currentStreak);
-    }
 
-    habit.streak = Math.max(longestStreak, currentStreak);
-    habit.completedDates = sortedDates; // Guardar fechas normalizadas
-}
+        // Asegurar que las fechas estén normalizadas y ordenadas
+        const sortedDates = [...habit.completedDates]
+            .map(date => this.normalizeDate(date))
+            .filter(date => this.isValidDate(date))
+            .filter((date, index, array) => array.indexOf(date) === index)
+            .sort();
+
+        habit.completedDates = sortedDates;
+
+        if (sortedDates.length === 0) {
+            habit.streak = 0;
+            return;
+        }
+
+        let currentStreak = 1;
+        let longestStreak = 1;
+
+        for (let i = 1; i < sortedDates.length; i++) {
+            const prevDate = new Date(sortedDates[i - 1]);
+            const currDate = new Date(sortedDates[i]);
+            
+            // Calcular diferencia en días
+            const diffTime = Math.abs(currDate - prevDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 1) {
+                // Día consecutivo - aumentar racha
+                currentStreak++;
+            } else if (diffDays > 1) {
+                // Gap detectado - reiniciar racha actual
+                longestStreak = Math.max(longestStreak, currentStreak);
+                currentStreak = 1;
+            }
+            
+            longestStreak = Math.max(longestStreak, currentStreak);
+        }
+
+        habit.streak = Math.max(longestStreak, currentStreak);
+    }
 
     deleteHabit(habitId) {
         const habitIndex = this.habits.findIndex(h => h.id === habitId);
@@ -238,7 +275,7 @@ updateStreak(habit) {
         }
 
         this.habits.forEach(habit => {
-            const isCompleted = habit.completedDates.includes(this.currentDate);
+            const isCompleted = habit.completedDates.includes(this.normalizeDate(this.currentDate));
             const completionRate = this.calculateCompletionRate(habit);
             
             const habitElement = document.createElement('div');
@@ -277,8 +314,9 @@ updateStreak(habit) {
     }
 
     updateStats() {
+        const currentDateNormalized = this.normalizeDate(this.currentDate);
         const completedToday = this.habits.filter(habit => 
-            habit.completedDates.includes(this.currentDate)
+            habit.completedDates.includes(currentDateNormalized)
         ).length;
 
         const totalHabits = this.habits.length;
@@ -339,13 +377,14 @@ updateStreak(habit) {
             return dayElement;
         }
 
-        const isToday = dateStr === this.currentDate;
+        const normalizedDate = this.normalizeDate(dateStr);
+        const isToday = normalizedDate === this.currentDate;
         const isCompleted = this.habits.some(habit => 
-            habit.completedDates.includes(dateStr)
+            habit.completedDates.includes(normalizedDate)
         );
 
         const completedHabits = this.habits.filter(habit => 
-            habit.completedDates.includes(dateStr)
+            habit.completedDates.includes(normalizedDate)
         ).length;
 
         dayElement.className = `calendar-day-full ${isCompleted ? 'completed' : ''} ${isToday ? 'today' : ''}`;
@@ -551,6 +590,8 @@ updateStreak(habit) {
                 
                 if (data.habits && Array.isArray(data.habits)) {
                     this.habits = data.habits;
+                    this.normalizeAllDates();
+                    this.habits.forEach(habit => this.updateStreak(habit));
                     this.saveHabits();
                     this.renderHabits();
                     this.renderFullCalendar();
@@ -617,7 +658,7 @@ let app;
 function initializeApp() {
     if (typeof Chart !== 'undefined') {
         app = new HabitTracker();
-        window.app = app; // Hacer global para los event listeners
+        window.app = app;
     } else {
         setTimeout(initializeApp, 100);
     }
@@ -642,4 +683,3 @@ function loadChartJS(callback) {
 document.addEventListener('DOMContentLoaded', function() {
     loadChartJS(initializeApp);
 });
-
